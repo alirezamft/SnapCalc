@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Snapp Rides Calculator",
+  "version": "10.0.1",
+  "description": "جمع هزینه ریالی سفرهای اسنپ + محاسبه دلاری و بیتکوینی",
+
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "downloads",
+    "storage"         
+  ],
+  "host_permissions": [
+    "https://app.snapp.taxi/*",
+    "https://api.nobitex.ir/*",
+    "https://apiv2.nobitex.ir/*",
+    "<all_urls>"
+  ],
+
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Snapp Calculator" },
+  "content_scripts": [
+    {
+      "matches": ["https://app.snapp.taxi/*"],
+      "js": [
+        "price-provider.js",
+        "usd-calc.js",
+        "btc-calc.js",
+        "ui-skin.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
