@@ -105,6 +105,13 @@
     .snpp-card{ position:fixed;top:20px;right:20px;width:480px;min-height:560px;background:var(--bg);border-radius:18px;box-shadow:0 10px 34px rgba(0,0,0,.35);overflow:hidden;display:flex;flex-direction:column;z-index:999999 }
     .snpp-top{ display:flex;align-items:center;justify-content:space-between;background:#0b0f14;border-bottom:1px solid var(--line);padding:8px 12px;cursor:grab }
     .title{font-size:13px;font-weight:700}
+    <div class="snpp-top" id="dragHandle">
+      <div class="title">محاسبه گر هزینه های اسنپ</div>
+      <div class="top-acts">
+        <button id="btn-log" class="icon" title="دانلود لاگ">⤓</button>
+        <button id="close" class="icon" title="بستن">×</button>
+      </div>
+    </div>
     .top-acts{display:flex;gap:6px}
     .icon{border:none;border-radius:8px;background:#151b23;color:var(--text);cursor:pointer;font-size:12px;padding:6px 10px}
     #close.icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;padding:0}
@@ -212,16 +219,28 @@
 
   /* ---------- logs ---------- */
   let logs = [];
-  function pushLog(level, msg, extra){
-    try { if (!logs) logs = []; logs.push({ts:new Date().toISOString(),level,msg,...(extra?{extra}:{})});
-      if($last && !$progress.hidden) $last.textContent = msg||""; } catch {}
-  }
-  function downloadLogs(){
-    try { const blob=new Blob([JSON.stringify(logs,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download=`snapp-logs-${Date.now()}.json`; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),600); } catch {}
-  }
-  $btnLog && ($btnLog.onclick = downloadLogs);
+
+function pushLog(level, msg, extra){
+  try {
+    if (!logs) logs = [];
+    logs.push({ ts:new Date().toISOString(), level, msg, ...(extra ? {extra} : {}) });
+    if ($last && !$progress.hidden) $last.textContent = msg || "";
+  } catch {}
+}
+
+function downloadLogs(){
+  try {
+    const blob = new Blob([JSON.stringify(logs||[], null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `snapp-logs-${Date.now()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 600);
+  } catch {}
+}
+
+$btnLog && ($btnLog.onclick = downloadLogs);
 
   /* ---------- progress & CTA ---------- */
   const inflight = { USD:false, BTC:false };
@@ -312,11 +331,13 @@ $btnShare && ($btnShare.onclick = () => {
 
   const usdAmt = +(cacheUSD?.totalUSD || 0);
   const usdNow = +(cacheUSD?.priceNow  || 0);
-  const usdValT= usdNow ? Math.round(usdAmt * usdNow / 10) : 0;
+  //const usdValT= usdNow ? Math.round(usdAmt * usdNow / 10) : 0;
+  const usdValT = usdNow ? Math.round(usdAmt * usdNow) : 0; // IRT = تومان
 
   const btcAmt = +(cacheBTC?.totalBTC || 0);
   const btcNow = +(cacheBTC?.priceNow  || 0);
-  const btcValT= btcNow ? Math.round(btcAmt * btcNow / 10) : 0;
+  //const btcValT= btcNow ? Math.round(btcAmt * btcNow / 10) : 0;
+  const btcValT = btcNow ? Math.round(btcAmt * btcNow) : 0;
 
   const usdPct = usdValT ? Math.round(computePctDiff(usdValT) || 0) : null;
   const btcPct = btcValT ? Math.round(computePctDiff(btcValT) || 0) : null;
@@ -392,13 +413,13 @@ ${toEn(usdAmt.toFixed(2))} تتر (حدودا: ${toEn(usdValT)} تومان)
   function renderFromCache(){
     if (currentAsset==="USDT" && cacheUSD){
       const usd=+cacheUSD.totalUSD||0, now=+cacheUSD.priceNow||0;
-      const valT = now? toman(usd*now) : 0;
+      const valT = now ? Math.round(usd * now) : 0;
       if ($amount) $amount.textContent = toEn(usd.toFixed ? +usd.toFixed(2) : usd);
       if ($value)  $value.textContent  = valT? toEn(valT) : "—";
       renderPct(valT? computePctDiff(valT) : null);
     } else if (currentAsset==="BTC" && cacheBTC){
       const btc=+cacheBTC.totalBTC||0, now=+cacheBTC.priceNow||0;
-      const valT = now? toman(btc*now) : 0;
+      const valT = now ? Math.round(btc * now) : 0;
       if ($amount) $amount.textContent = toEn(btc.toFixed ? +btc.toFixed(6) : btc);
       if ($value)  $value.textContent  = valT? toEn(valT) : "—";
       renderPct(valT? computePctDiff(valT) : null);
@@ -459,7 +480,7 @@ ${toEn(usdAmt.toFixed(2))} تتر (حدودا: ${toEn(usdValT)} تومان)
           const row=payload.perDay[day]||{};
           if (row.usd) cumUSD += row.usd;
           const close=row.close||payload.priceNow||0;
-          sU.push( close ? (cumUSD*close)/10 : (sU.length ? sU[sU.length-1] : 0) );
+          sU.push( close ? Math.round(cumUSD * close) : (sU.length ? sU[sU.length-1] : 0) );
         }
         cacheUSD = { totalUSD:+payload.totalUSD||0, priceNow:+payload.priceNow||0, perDay: payload.perDay||{}, series:{ usdt:sU } };
         renderFromCache();
@@ -477,7 +498,7 @@ ${toEn(usdAmt.toFixed(2))} تتر (حدودا: ${toEn(usdValT)} تومان)
           const row=payload.perDay[day]||{};
           if (row.btc) cumBTC += row.btc;
           const close=row.close||payload.priceNow||0;
-          sB.push( close ? (cumBTC*close)/10 : (sB.length ? sB[sB.length-1] : 0) );
+          sB.push( close ? Math.round(cumBTC * close) : (sB.length ? sB[sB.length-1] : 0) );
         }
         cacheBTC = { totalBTC:+payload.totalBTC||0, priceNow:+payload.priceNow||0, perDay: payload.perDay||{}, series:{ btc:sB } };
         renderFromCache();
@@ -526,35 +547,42 @@ function _collectExportDataBoth(){
   try{
     if (byDay) {
       days = Object.keys(byDay).sort();
+
+      // از perDay هر کدوم آماده‌تر بود استفاده کن (اولویت با فیلد جدید IRT)
       const per = (cacheUSD?.perDay) || (cacheBTC?.perDay) || {};
-      let acc=0; tomanArr = days.map(d => (acc += Math.round((per[d]?.rial||0)/10)));
+      let acc = 0;
+      tomanArr = days.map(d => {
+        const irt =
+          (per[d]?.tomanIRT != null) ? per[d].tomanIRT :
+          (per[d]?.irt != null)       ? per[d].irt :
+          Math.round((per[d]?.rialIRR ?? per[d]?.rial ?? 0) / 10);
+        acc += Math.round(+irt || 0);
+        return acc;
+      });
     }
     usdtVal = cacheUSD?.series?.usdt || [];
     btcVal  = cacheBTC?.series?.btc  || [];
   }catch{}
 
   const usdAmt = +((cacheUSD?.totalUSD)||0);
-  const usdNow = +((cacheUSD?.priceNow)||0);
-  const usdValNowToman = usdNow ? Math.round(usdAmt*usdNow/10) : 0;
+  const usdNow = +((cacheUSD?.priceNow)||0);  // IRT
+  const usdValNowToman = usdNow ? Math.round(usdAmt * usdNow) : 0;
 
   const btcAmt = +((cacheBTC?.totalBTC)||0);
-  const btcNow = +((cacheBTC?.priceNow)||0);
-  const btcValNowToman = btcNow ? Math.round(btcAmt*btcNow/10) : 0;
+  const btcNow = +((cacheBTC?.priceNow)||0);  // IRT
+  const btcValNowToman = btcNow ? Math.round(btcAmt * btcNow) : 0;
 
   const principal = tomanArr.length ? tomanArr[tomanArr.length-1] : 0;
   const pct = (cur) => (principal>0 && cur>0) ? (((cur - principal)/principal)*100) : null;
 
-  /* NEW: محاسبه متن نوت برای عکس */
-  const sumTNum = _toNum(sumT);
-  const sumNote = _sumNoteText(sumTNum);
-
   return {
-    title, trips, range, sumT, sumNote,
+    title, trips, range, sumT,
     days, toman: tomanArr, usdtVal, btcVal,
     usdAmt, usdValNowToman, usdPct: pct(usdValNowToman),
     btcAmt, btcValNowToman, btcPct: pct(btcValNowToman)
   };
 }
+
 
 function _linePathLinear(vals, W, H, P, max){
   const arr = (Array.isArray(vals)?vals:[]).map(v=>+v||0);
@@ -681,7 +709,7 @@ function _buildExportSVG(data, opt = {}) {
     ${`<text x="${xBTC}" y="56" text-anchor="end" font-size="12" font-weight="800" fill="#ffca42" style="font-family:'YekanX','Vazirmatn',system-ui !important;">بیت کوین</text>`}
     ${`<text x="${xUSDT}" y="56" text-anchor="end" font-size="12" font-weight="800" fill="#21D59B" style="font-family:'YekanX','Vazirmatn',system-ui !important;">تتر</text>`}
 
-    ${txt(xLabel - 20, 78, ":اندوخته امروز", 13, 600, "#e6edf3","end")}
+    ${txt(xLabel - 20, 78, ":اندوخته تا امروز", 13, 600, "#e6edf3","end")}
     ${txt(xBTC,        78, _numEn(data.btcAmt, 6), 13, 800, "#e6edf3","end")}
     ${txt(xBTC + 5,    78, "BTC", 11, 500, "#9da5b4","start")}
     ${txt(xUSDT,       78, _numEn(data.usdAmt, 2), 13, 800, "#e6edf3","end")}
@@ -689,9 +717,9 @@ function _buildExportSVG(data, opt = {}) {
 
     ${txt(xLabel - 20, 104, ":ارزش امروز (تومان)", 13, 600, "#e6edf3","end")}
     ${txt(xBTC,        104, _numEn(data.btcValNowToman), 13, 800, "#e6edf3","end")}
-    ${txt(xBTC + 6,    104, pctChip(data.btcPct), 11, 600, "${btcPctColor}","start")}
+    ${txt(xBTC + 6,    104, pctChip(data.btcPct), 11, 600, "#21D59B","start")}
     ${txt(xUSDT,       104, _numEn(data.usdValNowToman), 13, 800, "#e6edf3","end")}
-    ${txt(xUSDT + 6,   104, pctChip(data.usdPct), 11, 600, "${usdPctColor}","start")}
+    ${txt(xUSDT + 6,   104, pctChip(data.usdPct), 11, 600, "#21D59B","start")}
   </g>
 
   ${txt(W/2, pad + topH + statsH + gap1 + investH + 18, "مقایسه رشد (تومان / تتر / بیت کوین)", 11, 600, "#9fb3c3","middle")}
