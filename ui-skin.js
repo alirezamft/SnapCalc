@@ -526,13 +526,14 @@ function _toNum(s){
 }
 
 /* NEW: همون منطق نوت جمع هزینه که تو مودال داری، برای خروجی عکس */
+function _toNum(s){ return +String(s || "").replace(/[^\d.-]/g,"") || 0; }
 function _sumNoteText(sumToman){
-  let txt = "";
-  if (sumToman >= 150_000_000) txt = "😒 شما یه ماشین با رننده دربست بگیر";
-  else if (sumToman >= 100_000_000) txt = "🤗 تبریک میگم! شما اسنپ رو پولدار کردی";
-  else if (sumToman >= 50_000_000)  txt = "🤯 اوه اوه، خرجت زیاده ";
-  else if (sumToman >= 20_000_000)  txt = "😐 هزینه‌هات داره میره بالا";
-  else if (sumToman > 0)            txt = "👌 اوکیه، مدیریت هزینه‌ت خوبه";
+  let txt="";
+  if (sumToman >= 150_000_000) txt="😒 شما یه ماشین با رننده دربست بگیر";
+  else if (sumToman >= 100_000_000) txt="🤗 تبریک میگم! شما اسنپ رو پولدار کردی";
+  else if (sumToman >= 50_000_000)  txt="🤯 اوه اوه، خرجت زیاده ";
+  else if (sumToman >= 20_000_000)  txt="😐 هزینه‌هات داره میره بالا";
+  else if (sumToman > 0)            txt="👌 اوکیه، مدیریت هزینه‌ت خوبه";
   return txt;
 }
 
@@ -574,12 +575,15 @@ function _collectExportDataBoth(){
 
   const principal = tomanArr.length ? tomanArr[tomanArr.length-1] : 0;
   const pct = (cur) => (principal>0 && cur>0) ? (((cur - principal)/principal)*100) : null;
+  const sumTNum  = _toNum(sumT);
+  const sumNote  = _sumNoteText(sumTNum);
 
   return {
     title, trips, range, sumT,
     days, toman: tomanArr, usdtVal, btcVal,
     usdAmt, usdValNowToman, usdPct: pct(usdValNowToman),
-    btcAmt, btcValNowToman, btcPct: pct(btcValNowToman)
+    btcAmt, btcValNowToman, btcPct: pct(btcValNowToman),
+    sumNote
   };
 }
 
